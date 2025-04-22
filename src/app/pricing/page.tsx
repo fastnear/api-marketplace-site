@@ -136,20 +136,20 @@ export default function PricingOptionsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left comparison-table">
               <thead>
-              <tr className="bg-gray-50 dark:bg-gray-800">
-                <th className="p-4 border-b border-gray-200 dark:border-gray-700 text-lg">API</th>
-                <th className="p-4 border-b border-gray-200 dark:border-gray-700 text-lg">Description</th>
-                <th className="p-4 border-b border-gray-200 dark:border-gray-700 text-lg text-right">Cost Per Request</th>
-              </tr>
+                <tr className="bg-gray-50 dark:bg-gray-800">
+                  <th className="p-4 border-b border-gray-200 dark:border-gray-700 text-lg">API</th>
+                  <th className="p-4 border-b border-gray-200 dark:border-gray-700 text-lg">Description</th>
+                  <th className="p-4 border-b border-gray-200 dark:border-gray-700 text-lg text-right">Cost Per Request</th>
+                </tr>
               </thead>
               <tbody>
-              {API_USAGE_RATES.map((item, index) => (
-                <tr key={index} className={index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800"}>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">{item.api}</td>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 text-slate-700 dark:text-gray-300">{item.description}</td>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 text-right font-mono">{item.costPerRequest}</td>
-                </tr>
-              ))}
+                {API_USAGE_RATES.map((item, index) => (
+                  <tr key={index} className={index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800"}>
+                    <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">{item.api}</td>
+                    <td className="p-4 border-b border-gray-200 dark:border-gray-700 text-slate-700 dark:text-gray-300">{item.description}</td>
+                    <td className="p-4 border-b border-gray-200 dark:border-gray-700 text-right font-mono">{item.costPerRequest}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
