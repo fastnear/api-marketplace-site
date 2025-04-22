@@ -2,10 +2,10 @@ import { createClient } from '@clickhouse/client';
 
 // Create a new ClickHouse client
 export const clickhouse = createClient({
-  host: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
-  username: process.env.CLICKHOUSE_USERNAME || 'default',
-  password: process.env.CLICKHOUSE_PASSWORD || '',
-  database: process.env.CLICKHOUSE_DATABASE || 'default',
+  host: process.env.NEXT_CLICKHOUSE_HOST || 'http://localhost:8123',
+  username: process.env.NEXT_CLICKHOUSE_USERNAME || 'default',
+  password: process.env.NEXT_CLICKHOUSE_PASSWORD || '',
+  database: process.env.NEXT_CLICKHOUSE_DATABASE || 'default',
   request_timeout: 30000, // 30 seconds
 });
 
@@ -32,7 +32,7 @@ export async function initializeClickHouseSchema() {
   try {
     // Create database if not exists
     await clickhouse.exec({
-      query: `CREATE DATABASE IF NOT EXISTS ${process.env.CLICKHOUSE_DATABASE || 'default'}`,
+      query: `CREATE DATABASE IF NOT EXISTS ${process.env.NEXT_CLICKHOUSE_DATABASE || 'default'}`,
     });
 
     // Create users table
@@ -149,6 +149,6 @@ export async function initializeClickHouseSchema() {
 }
 
 // Initialize the ClickHouse schema when the module is imported in development
-if (process.env.NODE_ENV !== 'production' && process.env.USE_CLICKHOUSE === 'true') {
+if (process.env.NODE_ENV !== 'production' && process.env.NEXT_USE_CLICKHOUSE === 'true') {
   initializeClickHouseSchema().catch(console.error);
 }

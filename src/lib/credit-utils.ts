@@ -9,7 +9,7 @@ import { query } from './db';
 // } from './clickhouse-credit-utils';
 
 // Determine which database to use
-const useClickHouse = process.env.USE_CLICKHOUSE === 'true';
+const useClickHouse = process.env.NEXT_USE_CLICKHOUSE === 'true';
 
 // Get user credits from the database
 export async function getUserCredits(userId: string): Promise<number> {

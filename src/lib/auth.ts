@@ -7,11 +7,11 @@ import PgAdapter from "@auth/pg-adapter";
 import { Pool } from "pg";
 import { initializeDatabase } from "./db";
 
-// Initialize PostgreSQL connection pool if DATABASE_URL is set
+// Initialize PostgreSQL connection pool if NEXT_DATABASE_URL is set
 let pool: Pool | undefined;
-if (process.env.DATABASE_URL) {
+if (process.env.NEXT_DATABASE_URL) {
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.NEXT_DATABASE_URL
   });
 
   // Initialize the database schema if it doesn't exist
@@ -70,16 +70,16 @@ export const authOptions: NextAuthOptions = {
     // Commented out auth providers - uncomment as needed when API keys are available
     /*
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      clientId: process.env.NEXTAUTH_GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.NEXTAUTH_GOOGLE_CLIENT_SECRET || "",
     }),
     GitHubProvider({
-      clientId: process.env.GITHUB_ID || "",
-      clientSecret: process.env.GITHUB_SECRET || "",
+      clientId: process.env.NEXTAUTH_GITHUB_ID || "",
+      clientSecret: process.env.NEXTAUTH_GITHUB_SECRET || "",
     }),
     EmailProvider({
-      server: process.env.EMAIL_SERVER || "",
-      from: process.env.EMAIL_FROM || "noreply@fastnear.com",
+      server: process.env.NEXTAUTH_EMAIL_SERVER || "",
+      from: process.env.NEXTAUTH_EMAIL_FROM || "noreply@fastnear.com",
       // Email magic link settings
       maxAge: 60 * 60, // 1 hour
     }),
