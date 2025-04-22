@@ -1,18 +1,17 @@
 'use client'
 
-// TODO login/logout is currently mocked
-
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from './theme-toggle';
 import { useTheme } from 'next-themes';
 import { THEME, THEME_ASSETS } from './theme-config';
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 export default function Navbar() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
+  const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { resolvedTheme } = useTheme();
 
   // Avoid hydration mismatch by mounting after initial render
@@ -20,10 +19,18 @@ export default function Navbar() {
     setMounted(true);
   }, []);
 
-  const handleLogin = () => {
-    setShowTooltip(true);
-    setTimeout(() => setShowTooltip(false), 2000); // Hide tooltip after 2 seconds
-  };
+  // Close the user menu when clicking outside of it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuOpen) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userMenuOpen]);
 
   // During SSR and initial client render, show a neutral version or loading state
   if (!mounted) {
@@ -49,7 +56,6 @@ export default function Navbar() {
   return (
     <nav className="flex justify-between items-center px-8 py-4 bg-background text-foreground border-b border-foreground/10">
       <div className="flex items-center space-x-4">
-
         <Link href="/" className="home-link">
           API Marketplace
         </Link>
@@ -59,31 +65,68 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center space-x-6">
-        {isLoggedIn && (
+        {status === 'authenticated' && (
           <Link href="/dashboard" className="hover:underline mr-4">
             Dashboard
           </Link>
         )}
-        {!isLoggedIn ? (
+        {status === 'unauthenticated' ? (
+          <Link 
+            href="/login"
+            className="px-4 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Login
+          </Link>
+        ) : status === 'authenticated' ? (
           <div className="relative">
             <button
-              onClick={handleLogin}
-              onMouseEnter={() => setShowTooltip(true)}
-              onMouseLeave={() => setShowTooltip(false)}
-              className="text-muted cursor-wait opacity-80 hover:opacity-100 animate-pulse-fast mr-2"
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center space-x-2 focus:outline-none"
             >
-              Login
-              {showTooltip && (
-                <div className="absolute -top-19 right-3 text-foreground text-lg font-bold px-12 py-6 rounded-xl shadow-lg animate-text-glow-light dark:animate-text-glow-dark animate-pulse">
-                  <span>so soon&trade;</span>
-                </div>
-              )}
+              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                {session.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt={session.user.name || 'User'}
+                    width={32}
+                    height={32}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <span className="text-sm font-medium">
+                    {session.user?.name?.charAt(0) || session.user?.email?.charAt(0) || 'U'}
+                  </span>
+                )}
+              </div>
             </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 py-2 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
+                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                  <p className="text-sm font-medium">{session.user?.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{session.user?.email}</p>
+                </div>
+                <Link
+                  href="/dashboard"
+                  className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => setUserMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    signOut({ callbackUrl: '/' });
+                    setUserMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
           </div>
         ) : (
-          <button onClick={() => setIsLoggedIn(false)} className="hover:underline mr-4">
-            Logout
-          </button>
+          <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse"></div>
         )}
         <div className="flex items-center">
           <ThemeToggle />
