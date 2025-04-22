@@ -1,0 +1,63 @@
+name = "api-marketplace-site"
+
+# Compatibility date for Workers runtime
+compatibility_date = "2024-04-01"
+
+# Next.js needs Node.js compatibility
+compatibility_flags = ["nodejs_compat"]
+
+# Define your build command
+[build]
+command = "yarn build"
+
+# Pages needs to know where your build output is located
+[site]
+bucket = "./.next/static"
+
+# Enable workers.dev subdomain - this keeps our workers.dev domain active
+workers_dev = true
+
+[vars]
+# Current domain - will be changed to custom domain later
+NEXT_PUBLIC_APP_URL = "https://api-marketplace-site.ek-f74.workers.dev"
+
+# When you're ready to add a custom domain, add routes below
+# This allows both workers.dev and custom domain to work simultaneously
+[[routes]]
+pattern = "api-marketplace-site.ek-f74.workers.dev/*"
+zone_name = "workers.dev"
+
+# Secret environment variables that should be set in Cloudflare dashboard:
+#
+# NEXTAUTH_URL - Set to match your domain: https://api-marketplace-site.ek-f74.workers.dev
+# NEXTAUTH_SECRET - Secret for NextAuth encryption
+#
+# Authentication providers
+# NEXTAUTH_GOOGLE_CLIENT_ID
+# NEXTAUTH_GOOGLE_CLIENT_SECRET
+# NEXTAUTH_GITHUB_ID
+# NEXTAUTH_GITHUB_SECRET
+# NEXTAUTH_EMAIL_SERVER
+# NEXTAUTH_EMAIL_FROM
+#
+# Database Configuration
+# NEXT_DATABASE_URL - PostgreSQL connection string
+# NEXT_USE_CLICKHOUSE - Switch to ClickHouse if true
+# NEXT_CLICKHOUSE_HOST
+# NEXT_CLICKHOUSE_USERNAME
+# NEXT_CLICKHOUSE_PASSWORD
+# NEXT_CLICKHOUSE_DATABASE
+#
+# Optional Configuration
+# JWT_EXPIRATION - JWT token expiration time in seconds
+
+# D1 database for session storage (uncomment if using)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "auth_db"
+# database_id = "your-d1-id-here"
+
+# When you add your custom domain in the future, add an additional route like this:
+# [[routes]]
+# pattern = "your-future-domain.com/*"
+# zone_name = "your-future-domain.com"
