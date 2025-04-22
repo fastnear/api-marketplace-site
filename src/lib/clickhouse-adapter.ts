@@ -55,7 +55,14 @@ export function ClickHouseAdapter(): Adapter {
       
       if (!rows.length) return null;
       
-      const user = rows[0];
+      const user = rows[0] as {
+        id: string;
+        name: string;
+        email: string;
+        email_verified: string | null;
+        image: string;
+      };
+      
       return {
         id: user.id,
         name: user.name,
@@ -74,7 +81,14 @@ export function ClickHouseAdapter(): Adapter {
       
       if (!rows.length) return null;
       
-      const user = rows[0];
+      const user = rows[0] as {
+        id: string;
+        name: string;
+        email: string;
+        email_verified: string | null;
+        image: string;
+      };
+      
       return {
         id: user.id,
         name: user.name,
@@ -99,7 +113,8 @@ export function ClickHouseAdapter(): Adapter {
       if (!accountRows.length) return null;
       
       // Get user
-      const userId = accountRows[0].user_id;
+      const account = accountRows[0] as { user_id: string };
+      const userId = account.user_id;
       const userQuery = `SELECT * FROM users WHERE id = '${userId}' LIMIT 1`;
       const userRows = await clickhouse.query({
         query: userQuery,
@@ -108,7 +123,14 @@ export function ClickHouseAdapter(): Adapter {
       
       if (!userRows.length) return null;
       
-      const user = userRows[0];
+      const user = userRows[0] as {
+        id: string;
+        name: string;
+        email: string;
+        email_verified: string | null;
+        image: string;
+      };
+      
       return {
         id: user.id,
         name: user.name,
@@ -126,7 +148,7 @@ export function ClickHouseAdapter(): Adapter {
           ALTER TABLE users
           UPDATE
             name = '${user.name || ''}',
-            email = '${user.email}',
+            email = '${user.email || ''}',
             image = '${user.image || ''}',
             email_verified = ${user.emailVerified ? `'${user.emailVerified.toISOString()}'` : 'NULL'},
             updated_at = '${now}'
@@ -134,9 +156,38 @@ export function ClickHouseAdapter(): Adapter {
         `,
       });
       
+      // Get updated user to ensure we return the complete user object
+      const query = `SELECT * FROM users WHERE id = '${user.id}' LIMIT 1`;
+      const rows = await clickhouse.query({
+        query,
+        format: 'JSONEachRow',
+      }).then(res => res.json());
+      
+      if (!rows.length) {
+        // If we can't find the user, return what we have with required fields
+        return {
+          id: user.id,
+          email: user.email || '',  // Ensure email is not undefined
+          emailVerified: user.emailVerified || null,
+          name: user.name || null,
+          image: user.image || null,
+        };
+      }
+      
+      const updatedUser = rows[0] as {
+        id: string;
+        name: string;
+        email: string;
+        email_verified: string | null;
+        image: string;
+      };
+      
       return {
-        ...user,
-        emailVerified: user.emailVerified || null,
+        id: updatedUser.id,
+        name: updatedUser.name || null,
+        email: updatedUser.email,
+        emailVerified: updatedUser.email_verified ? new Date(updatedUser.email_verified) : null,
+        image: updatedUser.image || null,
       };
     },
     
@@ -241,7 +292,11 @@ export function ClickHouseAdapter(): Adapter {
       
       if (!sessionRows.length) return null;
       
-      const session = sessionRows[0];
+      const session = sessionRows[0] as {
+        id: string;
+        user_id: string;
+        expires: string;
+      };
       const sessionExpires = new Date(session.expires);
       
       // Check if session is expired
@@ -256,7 +311,13 @@ export function ClickHouseAdapter(): Adapter {
       
       if (!userRows.length) return null;
       
-      const user = userRows[0];
+      const user = userRows[0] as {
+        id: string;
+        name: string;
+        email: string;
+        email_verified: string | null;
+        image: string;
+      };
       
       return {
         session: {
@@ -298,11 +359,17 @@ export function ClickHouseAdapter(): Adapter {
       
       if (!rows.length) return null;
       
+      const session = rows[0] as {
+        id: string;
+        user_id: string;
+        expires: string;
+      };
+      
       return {
-        id: rows[0].id,
+        id: session.id,
         sessionToken,
-        userId: rows[0].user_id,
-        expires: new Date(rows[0].expires),
+        userId: session.user_id,
+        expires: new Date(session.expires),
       };
     },
     
@@ -347,7 +414,11 @@ export function ClickHouseAdapter(): Adapter {
       
       if (!rows.length) return null;
       
-      const tokenData = rows[0];
+      const tokenData = rows[0] as {
+        identifier: string;
+        token: string;
+        expires: string;
+      };
       const expires = new Date(tokenData.expires);
       
       // Delete the token

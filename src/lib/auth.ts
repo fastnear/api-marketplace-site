@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import EmailProvider from "next-auth/providers/email";
 import { User } from "@/types/auth";
-import { PgAdapter } from "@auth/pg-adapter";
+import PgAdapter from "@auth/pg-adapter";
 import { Pool } from "pg";
 import { initializeDatabase } from "./db";
 

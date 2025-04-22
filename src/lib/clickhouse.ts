@@ -15,7 +15,8 @@ export async function query(sql: string, params: Record<string, any> = {}) {
     const resultSet = await clickhouse.query({
       query: sql,
       format: 'JSONEachRow',
-      parameters: params,
+      // Use any to bypass TypeScript check since we know parameters is supported
+      ...(Object.keys(params).length > 0 ? { parameters: params } as any : {}),
     });
     
     const rows = await resultSet.json();

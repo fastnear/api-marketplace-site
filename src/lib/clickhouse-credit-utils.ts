@@ -34,7 +34,8 @@ export async function getUserCreditsClickHouse(userId: string): Promise<number> 
       return 1000;
     }
     
-    return result[0].credits;
+    const creditData = result[0] as { credits: number };
+    return creditData.credits;
   } catch (error) {
     console.error('Error fetching user credits from ClickHouse:', error);
     throw error;
@@ -120,7 +121,13 @@ export async function getUserApiUsageClickHouse(userId: string, limit = 10): Pro
       format: 'JSONEachRow',
     }).then(res => res.json());
     
-    return result;
+    return result as {
+      api_name: string;
+      endpoint: string;
+      total_requests: number;
+      total_credits_used: number;
+      last_used: string;
+    }[];
   } catch (error) {
     console.error('Error fetching user API usage from ClickHouse:', error);
     throw error;
@@ -143,7 +150,8 @@ export async function getMonthlyApiUsageClickHouse(userId: string): Promise<numb
       format: 'JSONEachRow',
     }).then(res => res.json());
     
-    return parseInt(result[0].count, 10);
+    const usageData = result[0] as { count: string };
+    return parseInt(usageData.count, 10);
   } catch (error) {
     console.error('Error fetching monthly API usage from ClickHouse:', error);
     return 0;
