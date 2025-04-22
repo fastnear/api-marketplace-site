@@ -1,0 +1,43 @@
+openapi: 3.1.0
+info:
+  title: FastNEAR API
+  description: Useful NEAR Protocol endpoints for advanced caching and aggregation.
+servers:
+  - url: "https://api.fastnear.com"
+  - url: "https://test.api.fastnear.com"
+
+paths:
+  /status:
+    get:
+      summary: Status
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json: 
+              example: 
+                sync_balance_block_height: 179038439
+                sync_block_height: 179038439
+                sync_block_timestamp_nanosec: "1731131048798003067"
+                sync_latency_sec: 2.960060157
+                version: "0.10.0"
+      x-codeSamples:
+        - lang: curl
+          label: "cURL"
+          source: |
+            curl -s "https://api.fastnear.com/status"
+  /health:
+    get:
+      summary: Health
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json: 
+              example: 
+                status: "ok"
+      x-codeSamples:
+        - lang: curl
+          label: "cURL"
+          source: |
+            curl -s "https://api.fastnear.com/health" 

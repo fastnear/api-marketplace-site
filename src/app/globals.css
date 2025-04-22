@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #f0f4f8;
+    --foreground: #1e293b;
+    --primary: #0f56b3;
+    --primary-hover: #0c4a9e;
+    --secondary: #475569;
+    --muted: #64748b;
+    --accent: #2563eb;
+    --card-background: #ffffff;
+    --card-hover: #e0e7ff;
+  }
+
+  .dark {
+    --background: #0d102d;
+    --foreground: #ffffff;
+    --primary: #60a5fa;
+    --primary-hover: #3b82f6;
+    --secondary: #9ca3af;
+    --muted: #6b7280;
+    --accent: #3b82f6;
+    --card-background: #1a1f36;
+    --card-hover: rgba(96, 165, 250, 0.1);
+  }
+}
+
+/* Theme utility classes */
+@layer components {
+  .card-themed {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-6;
+  }
+  
+  .section-themed {
+    @apply bg-background text-foreground py-12 px-4 md:px-8;
+  }
+  
+  .heading-themed {
+    @apply text-foreground font-bold;
+  }
+  
+  .text-themed-secondary {
+    @apply text-gray-700 dark:text-gray-300;
+  }
+  
+  .button-themed-primary {
+    @apply bg-primary hover:bg-primary-hover text-white font-medium rounded-md px-4 py-2 transition-colors;
+  }
+  
+  .button-themed-secondary {
+    @apply bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded-md px-4 py-2 transition-colors;
+  }
+}
+
+/* Remove duplicate flex setup since it's in layout.tsx */
+html, body {
+  margin: 0;
+}
+
+/* thought this would halp */
+#fn-logo .logo {
+  width: 100px;
+  height: auto;
+  max-width: 100%;
+}
+
+/* Pricing card with improved theme support */
+.pricing-card {
+  background-color: var(--card-background);
+  color: var(--foreground);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  margin: 1rem;
+  max-width: 300px;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 320px;
+}
+
+.dark .pricing-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.pricing-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  background-color: var(--card-hover);
+  transform: translateY(-2px);
+}
+
+.dark .pricing-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Typography improvements */
+.pricing-card h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  letter-spacing: -0.025em;
+}
+
+.pricing-card .price {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.pricing-card p {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+
+.pricing-card .description {
+  margin-bottom: 2rem;
+}
+
+/* Comparison table improvements */
+.comparison-table th {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.comparison-table td {
+  color: var(--secondary);
+  padding: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dark .comparison-table td {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* General typography */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+nav {
+  background-color: var(--card-background);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
