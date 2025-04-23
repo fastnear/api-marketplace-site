@@ -68,11 +68,12 @@ export const authOptions: NextAuthOptions = {
     },
     
     // Commented out auth providers - uncomment as needed when API keys are available
-    /*
+    
     GoogleProvider({
       clientId: process.env.NEXTAUTH_GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.NEXTAUTH_GOOGLE_CLIENT_SECRET || "",
     }),
+    /*
     GitHubProvider({
       clientId: process.env.NEXTAUTH_GITHUB_ID || "",
       clientSecret: process.env.NEXTAUTH_GITHUB_SECRET || "",

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       },
     };
     
-    return NextResponse.json(info);
+    return null; // NextResponse.json(info);
   } catch (error) {
     console.error('Debug route error:', error);
     return NextResponse.json({ 
