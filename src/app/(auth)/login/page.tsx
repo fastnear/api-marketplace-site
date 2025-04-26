@@ -1,17 +1,60 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+// Loading component to show while suspense is resolving
+function LoginLoading() {
+  return (
+    <div className="flex min-h-[calc(100vh-144px)] items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md space-y-8 text-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+          <div className="h-4 w-32 mt-4 bg-gray-300 dark:bg-gray-700 rounded"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// The actual login form component that uses useSearchParams
+function LoginForm() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const authError = searchParams.get("error");
+  
   const [email, setEmail] = useState("");
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push(callbackUrl);
+    }
+  }, [status, router, callbackUrl]);
+
+  // Set error message if authentication error exists in URL
+  useEffect(() => {
+    if (authError) {
+      switch (authError) {
+      case "OAuthAccountNotLinked":
+        setError("This email is already associated with another account. Please sign in using the correct provider.");
+        break;
+      case "AccessDenied":
+        setError("Access denied. Please try again or use a different sign-in method.");
+        break;
+      default:
+        setError(`Authentication error: ${authError}`);
+      }
+    }
+  }, [authError]);
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,11 +62,11 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // Use credentials provider for now
+      // Use credentials provider for development
       const result = await signIn("credentials", {
         email,
         redirect: false,
-        callbackUrl: "/dashboard"
+        callbackUrl
       });
 
       if (result?.error) {
@@ -33,7 +76,7 @@ export default function LoginPage() {
       }
 
       if (result?.ok) {
-        router.push("/dashboard");
+        router.push(callbackUrl);
       }
     } catch (error) {
       setError("An unexpected error occurred");
@@ -44,12 +87,30 @@ export default function LoginPage() {
   const handleOAuthSignIn = async (provider: string) => {
     setLoading(true);
     try {
-      await signIn(provider, { callbackUrl: "/dashboard" });
+      await signIn(provider, { 
+        callbackUrl,
+        // Force account selection (for Google)
+        prompt: "select_account"
+      });
     } catch (error) {
       setError("Authentication failed");
       setLoading(false);
     }
   };
+
+  // Show loading state when checking session
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-[calc(100vh-144px)] items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md space-y-8 text-center">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-12 w-12 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+            <div className="h-4 w-32 mt-4 bg-gray-300 dark:bg-gray-700 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (emailSent) {
     return (
@@ -109,47 +170,62 @@ export default function LoginPage() {
           </button>
         </div>
 
-        <div className="my-6 flex items-center justify-center">
-          <div className="border-t border-gray-300 dark:border-gray-600 w-full"></div>
-          <div className="px-4 text-sm text-gray-500 dark:text-gray-400">Or</div>
-          <div className="border-t border-gray-300 dark:border-gray-600 w-full"></div>
-        </div>
-        
-        <form className="space-y-4" onSubmit={handleEmailSignIn}>
-          <div className="rounded-md shadow-sm">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="relative block w-full rounded-md border-0 p-2 text-gray-900 dark:text-white dark:bg-gray-800 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 dark:focus:ring-blue-500 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+        {process.env.NODE_ENV === "development" && (
+          <>
+            <div className="my-6 flex items-center justify-center">
+              <div className="border-t border-gray-300 dark:border-gray-600 w-full"></div>
+              <div className="px-4 text-sm text-gray-500 dark:text-gray-400">Or</div>
+              <div className="border-t border-gray-300 dark:border-gray-600 w-full"></div>
             </div>
-          </div>
+        
+            <form className="space-y-4" onSubmit={handleEmailSignIn}>
+              <div className="rounded-md shadow-sm">
+                <div>
+                  <label htmlFor="email" className="sr-only">
+                Email address
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="relative block w-full rounded-md border-0 p-2 text-gray-900 dark:text-white dark:bg-gray-800 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 dark:focus:ring-blue-500 sm:text-sm"
+                    placeholder="Email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
 
-          {error && (
-            <div className="text-red-500 text-sm text-center">{error}</div>
-          )}
-
-          <div>
-            <button
-              type="submit"
-              disabled={isEmailSending}
-              className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-600"
-            >
-              {isEmailSending ? "Signing in..." : "Sign in with Email"}
-            </button>
+              <div>
+                <button
+                  type="submit"
+                  disabled={isEmailSending}
+                  className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-600"
+                >
+                  {isEmailSending ? "Signing in..." : "Sign in with Email (Dev)"}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+        
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-900 rounded-md text-red-600 dark:text-red-400 text-sm text-center">
+            {error}
           </div>
-        </form>
+        )}
       </div>
     </div>
+  );
+}
+
+// Main component that wraps LoginForm with Suspense
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginForm />
+    </Suspense>
   );
 }

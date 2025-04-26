@@ -1,23 +1,7 @@
 import { query } from './db';
-// Uncomment when switching to ClickHouse
-// import { 
-//   getUserCreditsClickHouse,
-//   updateUserCreditsClickHouse,
-//   recordApiUsageClickHouse,
-//   getUserApiUsageClickHouse,
-//   getMonthlyApiUsageClickHouse
-// } from './clickhouse-credit-utils';
-
-// Determine which database to use
-const useClickHouse = process.env.NEXT_USE_CLICKHOUSE === 'true';
 
 // Get user credits from the database
 export async function getUserCredits(userId: string): Promise<number> {
-  // Uncomment to use ClickHouse when enabled
-  // if (useClickHouse) {
-  //   return getUserCreditsClickHouse(userId);
-  // }
-  
   // PostgreSQL implementation
   try {
     const result = await query(
@@ -43,11 +27,6 @@ export async function getUserCredits(userId: string): Promise<number> {
 
 // Update user credits
 export async function updateUserCredits(userId: string, newCredits: number): Promise<number> {
-  // Uncomment to use ClickHouse when enabled
-  // if (useClickHouse) {
-  //   return updateUserCreditsClickHouse(userId, newCredits);
-  // }
-  
   // PostgreSQL implementation
   try {
     const result = await query(
@@ -68,11 +47,6 @@ export async function updateUserCredits(userId: string, newCredits: number): Pro
 
 // Add API usage record
 export async function recordApiUsage(userId: string, apiName: string, endpoint: string, creditsUsed: number): Promise<void> {
-  // Uncomment to use ClickHouse when enabled
-  // if (useClickHouse) {
-  //   return recordApiUsageClickHouse(userId, apiName, endpoint, creditsUsed);
-  // }
-  
   // PostgreSQL implementation
   try {
     // Record usage
@@ -94,11 +68,6 @@ export async function recordApiUsage(userId: string, apiName: string, endpoint: 
 
 // Get user API usage statistics
 export async function getUserApiUsage(userId: string, limit = 10): Promise<any[]> {
-  // Uncomment to use ClickHouse when enabled
-  // if (useClickHouse) {
-  //   return getUserApiUsageClickHouse(userId, limit);
-  // }
-  
   // PostgreSQL implementation
   try {
     const result = await query(
@@ -122,11 +91,6 @@ export async function getUserApiUsage(userId: string, limit = 10): Promise<any[]
 
 // Get monthly API usage count
 export async function getMonthlyApiUsage(userId: string): Promise<number> {
-  // Uncomment to use ClickHouse when enabled
-  // if (useClickHouse) {
-  //   return getMonthlyApiUsageClickHouse(userId);
-  // }
-  
   // PostgreSQL implementation
   try {
     const result = await query(

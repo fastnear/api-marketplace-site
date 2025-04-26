@@ -1,17 +1,19 @@
 'use client'
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from './theme-toggle';
 import { useTheme } from 'next-themes';
 import { THEME, THEME_ASSETS } from './theme-config';
 import { useSession, signIn, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { resolvedTheme } = useTheme();
 
   // Avoid hydration mismatch by mounting after initial render
@@ -22,15 +24,45 @@ export default function Navbar() {
   // Close the user menu when clicking outside of it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuOpen) {
+      const target = event.target as Node;
+      const dropdown = document.getElementById('user-dropdown');
+
+      // Only close if the click is outside the dropdown
+      if (dropdown && !dropdown.contains(target)) {
         setUserMenuOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [userMenuOpen]);
+
+  const handleLogout = async (event: React.MouseEvent) => {
+    // Prevent any default behavior or event bubbling
+    event.preventDefault();
+    event.stopPropagation();
+
+    console.log("Logout button clicked");
+
+    if (isLoggingOut) {
+      console.log("Already logging out, ignoring click");
+      return;
+    }
+
+    setIsLoggingOut(true);
+    setUserMenuOpen(false);
+
+    try {
+      // Use the built-in signOut function from next-auth/react
+      await signOut({ callbackUrl: '/' });
+      console.log("SignOut function called successfully");
+    } catch (error) {
+      console.error('Logout failed:', error);
+      setIsLoggingOut(false);
+    }
+  };
 
   // During SSR and initial client render, show a neutral version or loading state
   if (!mounted) {
@@ -71,7 +103,7 @@ export default function Navbar() {
           </Link>
         )}
         {status === 'unauthenticated' ? (
-          <Link 
+          <Link
             href="/login"
             className="px-4 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
           >
@@ -84,24 +116,14 @@ export default function Navbar() {
               className="flex items-center space-x-2 focus:outline-none"
             >
               <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                {session.user?.image ? (
-                  <Image
-                    src={session.user.image}
-                    alt={session.user.name || 'User'}
-                    width={32}
-                    height={32}
-                    className="rounded-full"
-                  />
-                ) : (
-                  <span className="text-sm font-medium">
-                    {session.user?.name?.charAt(0) || session.user?.email?.charAt(0) || 'U'}
-                  </span>
-                )}
+                <span className="text-sm font-medium">
+                  {session.user?.name?.charAt(0) || session.user?.email?.charAt(0) || 'U'}
+                </span>
               </div>
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 py-2 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
+              <div id="user-dropdown" className="absolute right-0 mt-2 w-48 py-2 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
                 <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                   <p className="text-sm font-medium">{session.user?.name}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{session.user?.email}</p>
@@ -114,13 +136,11 @@ export default function Navbar() {
                   Dashboard
                 </Link>
                 <button
-                  onClick={() => {
-                    signOut({ callbackUrl: '/' });
-                    setUserMenuOpen(false);
-                  }}
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  Sign out
+                  {isLoggingOut ? 'Signing out...' : 'Sign out'}
                 </button>
               </div>
             )}
