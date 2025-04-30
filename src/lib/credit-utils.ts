@@ -8,8 +8,8 @@ export async function getUserCredits(userId: string): Promise<number> {
       [userId]
     );
 
-    // Mike: feel like we'll want to discuss this, seems hacky.
-    // later we may have api endpoint handling credit increases or something
+    // If no credits exist for the user, initialize them to a default value (1000).
+    // Consider implementing an API endpoint to handle credit initialization or increases in the future.
     if (result.rows.length === 0) {
       // Initialize credits if they don't exist
       await query(
