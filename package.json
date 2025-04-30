@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.9.0",
-    "@clickhouse/client": "^1.11.1",
+    "@neondatabase/api-client": "^2.0.0",
+    "@neondatabase/serverless": "^1.0.0",
     "@types/uuid": "^10.0.0",
     "next": "15.2.4",
     "next-auth": "^4.24.11",
@@ -22,6 +23,7 @@
     "pg": "^8.14.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

@@ -1,40 +1,52 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+
+// Note: We can't use getServerSession in middleware directly.
+// Authentication should be handled in route handlers using:
+// import { getServerSession } from 'next-auth/next';
 
 export async function middleware(request: NextRequest) {
   const { pathname: targetRoute } = request.nextUrl;
-  
-  // Get the user's session token
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-  
-  // Add debug headers
+
+  // With server-side sessions using getServerSession,
+  // authentication should be handled in the route handlers, not middleware.
+  // Middleware doesn't have access to getServerSession.
+
+  // Minimal header for debugging/logging
   const headers = new Headers({
-    'x-fastnear-log-targetRoute': targetRoute,
+    'x-fastnear-log-targetRoute': targetRoute
   });
 
-  // Check if the route requires authentication
-  if (targetRoute.startsWith('/dashboard')) {
-    // Redirect to login if not authenticated
-    if (!token) {
-      const url = new URL('/login', request.url);
-      url.searchParams.set('callbackUrl', targetRoute);
-      return NextResponse.redirect(url);
-    }
-  }
-
-  // Add the debug header to the response
+  // Pass through all requests, let route handlers manage authentication
   return NextResponse.next({
     headers,
   });
 }
 
-// See: https://nextjs.org/docs/app/api-reference/file-conventions/middleware#config-object-optional
-// Follows regex in the sense that you:
-// Use * for "no segment or segment"
-// Use + for "has to have segment"
+// Only include routes that need any middleware processing
 export const config = {
   matcher: [
     '/dashboard/:path*',
     '/pricing/:path+'
   ]
 }
+
+/*
+
+// With this approach, your protected routes would check authentication like this:
+
+// In a route handler
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+
+export async function GET(request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    // Handle unauthenticated access
+    return redirect('/api/auth/signin');
+  }
+
+  // Continue with authenticated access
+}
+
+ */
