@@ -26,7 +26,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const authError = searchParams.get("error");
-  
+
   const [email, setEmail] = useState("");
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -62,8 +62,8 @@ function LoginForm() {
     setError("");
 
     try {
-      // Use credentials provider for development
-      const result = await signIn("credentials", {
+      // Use email provider for "email a link" authentication
+      const result = await signIn("email", {
         email,
         redirect: false,
         callbackUrl
@@ -76,7 +76,9 @@ function LoginForm() {
       }
 
       if (result?.ok) {
-        router.push(callbackUrl);
+        // Show the check email screen when successfully sent
+        setEmailSent(true);
+        setIsEmailSending(false);
       }
     } catch (error) {
       setError("An unexpected error occurred");
@@ -87,7 +89,7 @@ function LoginForm() {
   const handleOAuthSignIn = async (provider: string) => {
     setLoading(true);
     try {
-      await signIn(provider, { 
+      await signIn(provider, {
         callbackUrl,
         // Force account selection (for Google)
         prompt: "select_account"
@@ -142,7 +144,7 @@ function LoginForm() {
             Access the NEAR API Marketplace
           </p>
         </div>
-        
+
         <div className="mt-6 flex flex-col gap-4">
           <button
             onClick={() => handleOAuthSignIn("google")}
@@ -158,59 +160,56 @@ function LoginForm() {
             Continue with Google
           </button>
 
-          <button
-            onClick={() => handleOAuthSignIn("github")}
-            disabled={loading}
-            className="flex items-center justify-center gap-3 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-4 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.699 1.028 1.592 1.028 2.683 0 3.841-2.337 4.687-4.565 4.935.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12c0-5.523-4.477-10-10-10z"/>
-            </svg>
-            Continue with GitHub
-          </button>
+          {/*Mike: we can uncomment for GitHub OAuth in the future */}
+          {/*<button*/}
+          {/*  onClick={() => handleOAuthSignIn("github")}*/}
+          {/*  disabled={loading}*/}
+          {/*  className="flex items-center justify-center gap-3 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-4 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"*/}
+          {/*>*/}
+          {/*  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">*/}
+          {/*    <path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.699 1.028 1.592 1.028 2.683 0 3.841-2.337 4.687-4.565 4.935.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12c0-5.523-4.477-10-10-10z"/>*/}
+          {/*  </svg>*/}
+          {/*  Continue with GitHub*/}
+          {/*</button>*/}
         </div>
 
-        {process.env.NODE_ENV === "development" && (
-          <>
-            <div className="my-6 flex items-center justify-center">
-              <div className="border-t border-gray-300 dark:border-gray-600 w-full"></div>
-              <div className="px-4 text-sm text-gray-500 dark:text-gray-400">Or</div>
-              <div className="border-t border-gray-300 dark:border-gray-600 w-full"></div>
-            </div>
-        
-            <form className="space-y-4" onSubmit={handleEmailSignIn}>
-              <div className="rounded-md shadow-sm">
-                <div>
-                  <label htmlFor="email" className="sr-only">
-                Email address
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    className="relative block w-full rounded-md border-0 p-2 text-gray-900 dark:text-white dark:bg-gray-800 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 dark:focus:ring-blue-500 sm:text-sm"
-                    placeholder="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-              </div>
+        <div className="my-6 flex items-center justify-center">
+          <div className="border-t border-gray-300 dark:border-gray-600 w-full"></div>
+          <div className="px-4 text-sm text-gray-500 dark:text-gray-400">Or</div>
+          <div className="border-t border-gray-300 dark:border-gray-600 w-full"></div>
+        </div>
 
-              <div>
-                <button
-                  type="submit"
-                  disabled={isEmailSending}
-                  className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-600"
-                >
-                  {isEmailSending ? "Signing in..." : "Sign in with Email (Dev)"}
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-        
+        <form className="space-y-4" onSubmit={handleEmailSignIn}>
+          <div className="rounded-md shadow-sm">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="relative block w-full rounded-md border-0 p-2 text-gray-900 dark:text-white dark:bg-gray-800 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 dark:focus:ring-blue-500 sm:text-sm"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={isEmailSending}
+              className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-600"
+            >
+              {isEmailSending ? "Sending verification link..." : "Sign in with Email"}
+            </button>
+          </div>
+        </form>
+
         {error && (
           <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-900 rounded-md text-red-600 dark:text-red-400 text-sm text-center">
             {error}
@@ -222,6 +221,7 @@ function LoginForm() {
 }
 
 // Main component that wraps LoginForm with Suspense
+// https://react.dev/reference/react/Suspense
 export default function LoginPage() {
   return (
     <Suspense fallback={<LoginLoading />}>
