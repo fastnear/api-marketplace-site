@@ -1,13 +1,13 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import GitHubProvider from "next-auth/providers/github";
+// commented out until GitHub OAuth makes sense
+// import GitHubProvider from "next-auth/providers/github";
 import EmailProvider from "next-auth/providers/email";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { User } from "@/types/auth";
-// import PgAdapter from "@auth/pg-adapter";
-import CustomPgAdapter from "./custom-pg-adapter";
-import { Pool } from "pg";
-import { initializeDatabase } from "./db";
+import type { SendVerificationRequestParams } from "next-auth/providers/email";
+import PgAdapterServerSession from "./pg-adapter-server-session";
+// see the second approach here:
+import { createTransport } from "nodemailer";
+import { pool } from "./db";
 
 /**
  * Authentication and User Session Management
@@ -16,66 +16,19 @@ import { initializeDatabase } from "./db";
  * - Database connection for session storage
  * - User credit management
  * - OAuth providers configuration
- * - Session initialization and enhancement
- * 
- * Database Tables Used:
- * - users: User profile information
- * - accounts: OAuth provider accounts
- * - sessions: Active user sessions
- * - user_credits: User credit balances
- * 
- * Authentication Flow:
- * 1. User signs in with Google OAuth
- * 2. NextAuth creates/updates user in database
- * 3. Session created and stored in database
- * 4. Session enhanced with user credits
- * 5. Session token stored in secure cookie
+ * - Session mgmt
  */
 
-// Initialize PostgreSQL connection pool if NEXT_DATABASE_URL is set
-let pool: Pool | undefined;
-if (process.env.NEXT_DATABASE_URL) {
-  pool = new Pool({
-    connectionString: process.env.NEXT_DATABASE_URL
-  });
-
-  // Initialize the database schema if it doesn't exist
-  if (process.env.NODE_ENV !== 'production') {
-    // PostgreSQL initialization
-    // This creates all required tables if they don't exist:
-    // - users, accounts, sessions, verification_tokens (NextAuth)
-    // - user_credits, api_usage (Custom tables)
-    // - Also creates trigger to initialize credits for new users
-    initializeDatabase().catch(console.error);
-  }
-} else {
-  console.error('ERROR: NEXT_DATABASE_URL environment variable is not set!');
-  console.error('Authentication requires a database connection. Please set NEXT_DATABASE_URL.');
-}
-
-/**
- * Get user credits from database
- * Called during session creation/validation to include credits in session
- * 
- * Database Query:
- * ```sql
- * SELECT credits FROM user_credits WHERE user_id = $1
- * ```
- * 
- * Returns null if:
- * - Database is not configured
- * - User has no credits record
- * - Database error occurs
- */
+// Get user credits from database
 async function getUserCredits(userId: string): Promise<number | null> {
   if (!pool) return null;
-  
+
   try {
     const result = await pool.query(
       'SELECT credits FROM user_credits WHERE user_id = $1',
       [userId]
     );
-    
+
     if (result.rows.length > 0) {
       return result.rows[0].credits;
     }
@@ -87,14 +40,15 @@ async function getUserCredits(userId: string): Promise<number | null> {
 }
 
 export const authOptions: NextAuthOptions = {
+  // shows more logs
   debug: process.env.NODE_ENV === "development",
-  
+
   /**
    * Database Adapter Configuration
    * Uses the PostgreSQL adapter exclusively
    * This enables database-backed sessions
    */
-  adapter: pool ? CustomPgAdapter(pool) : undefined,
+  adapter: pool ? PgAdapterServerSession(pool) : undefined,
 
   providers: [
     // Google OAuth provider - primary authentication method
@@ -111,30 +65,7 @@ export const authOptions: NextAuthOptions = {
         }
       }
     }),
-    
-    // Development-only credential provider
-    ...(process.env.NODE_ENV === "development" ? [
-      CredentialsProvider({
-        id: "credentials",
-        name: "Development Credentials",
-        credentials: {
-          email: { label: "Email", type: "email" },
-        },
-        async authorize(credentials) {
-        // This is a simplified dev version that allows any email to work
-          if (credentials?.email) {
-            return {
-              id: "dev-user-id",
-              name: "Development User",
-              email: credentials.email,
-              image: null,
-            };
-          }
-          return null;
-        },
-      })
-    ] : []),
-    
+
     // GitHub provider is commented until needed
     /*
     GitHubProvider({
@@ -142,56 +73,101 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.NEXTAUTH_GITHUB_SECRET || "",
     }),
     */
-    
-    // Email provider is commented until needed
-    /*
+
     EmailProvider({
-      server: process.env.NEXTAUTH_EMAIL_SERVER || "",
-      from: process.env.NEXTAUTH_EMAIL_FROM || "noreply@fastnear.com",
+      server: {
+        host: process.env.NEXTAUTH_SMTP_SERVER,
+        port: parseInt(process.env.NEXTAUTH_SMTP_PORT || '465'),
+        auth: {
+          user: process.env.NEXTAUTH_SMTP_USER,
+          pass: process.env.NEXTAUTH_SMTP_PASSWORD
+        },
+        secure: true
+      },
+      from: process.env.NEXTAUTH_EMAIL_FROM,
       maxAge: 60 * 60, // 1 hour
+
+      async sendVerificationRequest(params: SendVerificationRequestParams) {
+        const { identifier, url, provider } = params;
+        console.log("Sending verification email to:", identifier);
+        console.log("Verification URL:", url);
+
+        try {
+          // Create transport using configuration above in server
+          const transport = createTransport(provider.server);
+
+          // Send email with enhanced template
+          const result = await transport.sendMail({
+            to: identifier,
+            from: process.env.NEXTAUTH_EMAIL_FROM,
+            subject: `FastNear Subscriptions Dashboard`,
+            text: `Click to access your dashboard: ${url}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                <h2>FastNear Subscriptions Dashboard</h2>
+                <p>Use the link below to continue:</p>
+                <p style="text-align: center;">
+                  <a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 5px;">Open Dashboard</a>
+                </p>
+                <p style="color: #666; font-size: 14px; margin-top: 20px;">If this wasn’t you, feel free to ignore this message.</p>
+              </div>`
+          });
+
+          console.log("Email transmission result:", {
+            messageId: result.messageId,
+            accepted: result.accepted,
+            rejected: result.rejected
+          });
+        } catch (error) {
+          console.error("Verification email transmission failure:", error);
+          throw error;
+        }
+      }
     }),
-    */
   ],
-  
+
   pages: {
+    // page showing login options (src/app/(auth)/login/page.tsx)
     signIn: "/login",
-    verifyRequest: "/verify-request", // Used for email verification
+    // used for email verification (src/app/(auth)/verify-request/page.tsx)
+    verifyRequest: "/verify-request",
   },
-  
+
   /**
    * Session Configuration
    * Using database strategy exclusively
-   * 
+   *
    * Session duration is 30 days by default
    */
   session: {
+    // see: https://neon.tech
     strategy: "database",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  
+
   callbacks: {
     /**
      * Session Callback - Enhance session with user data
      * Called whenever session is checked (on page loads, etc.)
-     * 
+     *
      * For database sessions, user object is available
      * We add credits to the session
      */
     async session({ session, user }) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('[Auth] Session callback called', {
+        console.log('[Auth] Session callback invoked', {
           hasUser: !!user,
           sessionUser: session?.user?.email
         });
       }
-      
+
       if (session.user && user) {
         // For database sessions (user is available)
         session.user.id = user.id;
         if (process.env.NODE_ENV === 'development') {
           console.log('[Auth] Database session for user:', user.email);
         }
-        
+
         // Add user credits to the session
         try {
           const credits = await getUserCredits(user.id);
@@ -207,11 +183,11 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    
+
     /**
      * SignIn Callback - Called during authentication
      * Allows rejecting sign-in based on additional checks
-     * 
+     *
      * Here we ensure Google accounts have verified emails
      * No direct database queries are made here
      */
@@ -223,35 +199,35 @@ export const authOptions: NextAuthOptions = {
           userEmail: user?.email
         });
       }
-      
-      // For Google, ensure email is verified
+
+      // for Google OAuth, we require email to be marked verified by Google
       if (account?.provider === 'google' && profile) {
-        // Type assertion for Google profile which has email_verified
         const googleProfile = profile as { email_verified?: boolean };
         if (process.env.NODE_ENV === 'development') {
-          console.log('[Auth] Google profile:', { 
+          console.log('[Auth] Google profile:', {
             emailVerified: googleProfile.email_verified,
             email: profile.email
           });
         }
-        
+
         if (googleProfile.email_verified === false) {
+          // prevent sign in
           console.error('[Auth] Rejecting sign in: Email not verified');
-          return false; // Prevent sign in if email not verified
+          return false;
         }
       }
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.log('[Auth] Sign in successful');
       }
       return true; // Allow sign in
     }
   },
-  
+
   /**
    * Events - Lifecycle hooks for authentication
    * Can be used for audit logging, analytics, or additional logic
-   * 
+   *
    * New users automatically get credits via database trigger in schema.sql:
    * CREATE TRIGGER user_created_trigger
    * AFTER INSERT ON users
@@ -262,12 +238,13 @@ export const authOptions: NextAuthOptions = {
     async createUser({ user }) {
       // Log user creation for auditing
       console.log("[Auth Event] New user created:", user.email);
-      
+
       // Note: Credits are initialized by database trigger in schema.sql
       // trigger automatically inserts 1000 credits for new users
       // INSERT INTO user_credits (user_id, credits) VALUES (NEW.id, 1000)
+      // TODO: mike ^ I don't like that, but can discuss approach
     },
-    
+
     async signIn({ user, account, isNewUser }) {
       if (process.env.NODE_ENV === 'development') {
         console.log("[Auth Event] User signed in:", user.email);
@@ -279,13 +256,13 @@ export const authOptions: NextAuthOptions = {
           isNewUser
         });
       }
-      
+
       // Additional tracking or analytics could be added here
       if (isNewUser) {
         console.log("[Auth Event] First time login for user:", user.email);
       }
     },
-    
+
     async linkAccount({ user, account }) {
       if (process.env.NODE_ENV === 'development') {
         console.log("[Auth Event] Account linked:", {
@@ -295,7 +272,7 @@ export const authOptions: NextAuthOptions = {
         });
       }
     },
-    
+
     async session({ session }) {
       if (process.env.NODE_ENV === 'development') {
         console.log("[Auth Event] Session updated:", {
