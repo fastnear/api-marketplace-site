@@ -1,6 +1,6 @@
 # NEAR API Marketplace
 
-A modern NextJS 15.2.4 application providing a unified marketplace for NEAR Protocol AI and blockchain APIs. This platform allows developers to purchase credits that can be used across multiple API services through a single dashboard.
+A modern NextJS application providing a unified marketplace for NEAR Protocol AI and blockchain APIs. This platform allows developers to purchase credits that can be used across multiple API services through a single dashboard.
 
 ## Features
 
@@ -11,11 +11,11 @@ A modern NextJS 15.2.4 application providing a unified marketplace for NEAR Prot
 
 ## Technology Stack
 
-- **Framework**: Next.js 15.2.4 with App Router
-- **Styling**: Tailwind CSS 3.4.1
-- **Theme Management**: next-themes 0.4.6 with system detection
-- **React**: 19.1.0
-- **TypeScript**: 5.6.2
+- **Framework**: Next.js with App Router
+- **Styling**: Tailwind CSS
+- **Theme Management**: next-themes with system detection
+- **React**: React 19
+- **TypeScript**: TypeScript
 - **Database**: PostgreSQL (Neon compatible)
 - **Authentication**: NextAuth.js with PostgreSQL adapter
 
@@ -24,22 +24,25 @@ A modern NextJS 15.2.4 application providing a unified marketplace for NEAR Prot
 ### Prerequisites
 
 - Node.js 20 or later
-- Yarn 4.9.1 or later
-- PostgreSQL 14+ or Neon account
+- Yarn
+- PostgreSQL or Neon account
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/fastnear/api-marketplace.git
-cd api-marketplace
+git clone https://github.com/near/api-marketplace-site.git
+cd api-marketplace-site
 
 # Install dependencies
 yarn
 
-# Copy environment file and configure
-cp .env.local.example .env.local
-# Edit .env.local with your configuration
+# Create a .env.local file with the following variables:
+# NEXT_DATABASE_URL=postgresql://username:password@hostname:port/database
+# NEXTAUTH_URL=http://localhost:3000
+# NEXTAUTH_GOOGLE_CLIENT_ID=your-google-client-id
+# NEXTAUTH_GOOGLE_CLIENT_SECRET=your-google-client-secret
+# (See src/lib/auth.ts and src/lib/db.ts for other required environment variables)
 
 # Start development server
 yarn dev
@@ -57,16 +60,16 @@ src/
 │   │   ├── theme-config.ts
 │   │   ├── theme-toggle.tsx
 │   │   └── providers/       # Context providers
+│   ├── (auth)/              # Auth routes
 │   ├── (logged-in)/         # Protected routes
 │   │   └── dashboard/       # User dashboard
 │   ├── pricing/             # Pricing page
-│   │   ├── [plan]/          # Plan-specific pages
-│   │   └── _logic/          # Business logic
-│   │       └── plan-types.ts
 │   ├── welcome/             # Welcome page
 │   ├── globals.css          # Global styles
 │   ├── layout.tsx           # Root layout
 │   └── page.tsx             # Home page
+├── components/              # Global components
+├── lib/                     # Utility functions and libraries
 ├── middleware.ts            # Next.js middleware
 └── types/                   # TypeScript declarations
 ```
@@ -119,32 +122,35 @@ NODE_ENV=production yarn start
 
 ## Database Schema
 
-The application uses a PostgreSQL database for storing user data, API keys, organizations, and usage metrics. Our schema is optimized for Neon PostgreSQL but works with any PostgreSQL 14+ installation.
+The application uses a PostgreSQL database for storing user data, API keys, and usage metrics. The schema is defined in `schema.sql` and includes:
 
-### Key Features
+### Key Tables
 
-- **Team Management**: Organizations and member management
-- **API Key Generation**: Secure API key creation and validation
-- **Usage Tracking**: Partitioned tables for high-volume data
-- **Credit System**: Transaction-based credit management
+- **users**: Core user information
+- **accounts**: OAuth account connections
+- **sessions**: Active user sessions
+- **verification_tokens**: Email verification
+- **user_credits**: Credit balance for API usage
+- **api_usage**: Tracks API consumption
 
-### Documentation
+### Automatic Credit Initialization
 
-All database schema documentation is now consolidated in a single file:
+New users automatically receive 1000 credits through a database trigger:
 
-- [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) - Complete schema documentation
-- [api-keys-teams-schema.sql](api-keys-teams-schema.sql) - SQL schema definition
+```sql
+CREATE OR REPLACE FUNCTION initialize_user_credits()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO user_credits (user_id, credits)
+  VALUES (NEW.id, 1000);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-### Schema Validation
-
-We provide a validation script that checks if your schema is compatible with Neon:
-
-```bash
-# Set your Neon API key
-export NEON_API_KEY=your_api_key_here
-
-# Run validation
-./validate-schema.js
+CREATE TRIGGER user_created_trigger
+AFTER INSERT ON users
+FOR EACH ROW
+EXECUTE FUNCTION initialize_user_credits();
 ```
 
 ### Database Connection
@@ -165,11 +171,51 @@ The application uses NextAuth.js for authentication with a custom PostgreSQL ada
 
 ### Authentication Features
 
-- **Google OAuth Integration**: Primary authentication method
-- **Custom PostgreSQL Adapter**: Supports snake_case database columns
-- **Database Sessions**: Secure HTTP-only cookie-based sessions
-- **Client-Side Protection**: Protected routes using the useSession() hook
-- **Automatic Credit Initialization**: New users receive 1000 credits automatically
+- **OAuth Integration**: Support for Google authentication
+- **Database Sessions**: Secure HTTP-only cookie-based sessions stored in PostgreSQL
+- **Email Verification**: Support for email-based verification tokens
+- **Automatic Credit Initialization**: New users receive 1000 credits automatically via database trigger
+
+### Email Authentication
+
+The application implements secure email-based authentication using NextAuth's EmailProvider with nodemailer:
+
+```typescript
+EmailProvider({
+  server: {
+    host: process.env.NEXTAUTH_SMTP_SERVER,
+    port: parseInt(process.env.NEXTAUTH_SMTP_PORT || '465'),
+    auth: {
+      user: process.env.NEXTAUTH_SMTP_USER,
+      pass: process.env.NEXTAUTH_SMTP_PASSWORD
+    },
+    secure: true  // Uses TLS for connection security
+  },
+  from: process.env.NEXTAUTH_EMAIL_FROM,
+  // Custom email sending logic with enhanced templates
+  async sendVerificationRequest(params) {
+    // Create transport using nodemailer
+    const transport = createTransport(provider.server);
+    // Send email with customized HTML template
+    // ...
+  }
+})
+```
+
+This implementation:
+1. Uses TLS-secured SMTP connections (port 465 with `secure: true`)
+2. Employs the nodemailer `createTransport` method as recommended in NextAuth documentation
+3. Provides custom HTML email templates for a branded experience
+4. Logs detailed transmission results for debugging
+
+To configure email authentication, add these environment variables:
+```
+NEXTAUTH_SMTP_SERVER=smtp.example.com
+NEXTAUTH_SMTP_PORT=465
+NEXTAUTH_SMTP_USER=your-smtp-username
+NEXTAUTH_SMTP_PASSWORD=your-smtp-password
+NEXTAUTH_EMAIL_FROM=noreply@example.com
+```
 
 ### Session Management
 
@@ -178,15 +224,13 @@ Sessions are stored in the database and referenced by HTTP-only cookies. This pr
 1. Better security against XSS attacks (vs. localStorage)
 2. Server-side session verification and revocation
 3. Persistent sessions across browser restarts
-4. User credit information embedded in session data
 
 ### Protected Routes
 
 Routes requiring authentication are:
 
 1. Protected client-side via the `useSession()` hook
-2. Redirected to login if the user is not authenticated
-3. Located in the `(logged-in)/` directory for organizational clarity
+2. Located in the `(logged-in)/` directory for organizational clarity
 
 ### Authentication Setup
 
@@ -206,9 +250,40 @@ NEXTAUTH_GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 ### Custom PostgreSQL Adapter
 
-The application uses a custom adapter (`src/lib/custom-pg-adapter.ts`) that maps between:
-- NextAuth's camelCase fields (userId, sessionToken, etc.)
-- PostgreSQL's snake_case columns (user_id, session_token, etc.)
+The application uses a custom adapter (`src/lib/pg-adapter-server-session.ts`) that bridges the gap between NextAuth.js's camelCase fields and PostgreSQL's snake_case columns:
 
-This provides better compatibility with PostgreSQL conventions while maintaining NextAuth compatibility.
+```
+NextAuth (camelCase)      PostgreSQL (snake_case)
+-------------------      ----------------------
+userId                   user_id
+sessionToken             session_token
+emailVerified            email_verified
+providerAccountId        provider_account_id
+refreshToken             refresh_token
+accessToken              access_token
+```
+
+This approach follows the [NextAuth.js adapter pattern](https://next-auth.js.org/tutorials/creating-a-database-adapter) but modifies it to use PostgreSQL conventions. The adapter:
+
+1. **Translates Field Names**: Maps between NextAuth's JavaScript conventions and SQL conventions
+2. **Handles Data Type Conversion**: Ensures proper serialization/deserialization between systems
+3. **Provides Fallbacks**: Handles both naming conventions for maximum compatibility
+
+For example, when linking an account:
+
+```typescript
+// The adapter handles both naming conventions to ensure compatibility
+const refreshToken = account.refresh_token || account.refreshToken;
+const accessToken = account.access_token || account.accessToken;
+```
+
+This dual-support approach enables easier database maintenance while preserving compatibility with NextAuth's expected interfaces.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
