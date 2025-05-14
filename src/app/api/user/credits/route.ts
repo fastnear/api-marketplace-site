@@ -1,55 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
+import { getUserCredits, getMonthlyApiUsage } from '@/lib/credit-utils';
+import { authOptions } from '@/lib/auth';
 
-// In development, we'll use mock data since database might not be set up
+// Determine environment for conditional logging
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 export async function GET(request: NextRequest) {
-  // Get user token from request
-  const token = await getToken({ 
-    req: request, 
-    secret: process.env.NEXTAUTH_SECRET 
-  });
+  // Get user session
+  const session = await getServerSession(authOptions);
   
   // Check if user is authenticated
-  if (!token || !token.sub) {
+  if (!session?.user?.id) {
+    if (isDevelopment) {
+      console.log('Authentication failed: No valid session found');
+    }
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
     );
   }
   
-  // Get the user ID (either from the query param or from the token)
-  const { searchParams } = new URL(request.url);
-  const requestedUserId = searchParams.get('userId');
-  
-  // Only allow users to access their own data
-  // Admin users could have special permissions here
-  if (requestedUserId && requestedUserId !== token.sub) {
-    return NextResponse.json(
-      { error: 'Forbidden' },
-      { status: 403 }
-    );
-  }
-  
   try {
-    // In development mode, use mock data
+    const userId = session.user.id;
+    
     if (isDevelopment) {
-      return NextResponse.json({
-        credits: 1000,
-        monthlyUsage: 243
-      });
+      console.log(`Fetching credits for authenticated user: ${userId}`);
     }
     
-    // In production, we would use the actual database
-    // Get user credits and usage from database
-    const userId = token.sub;
+    // Get actual credit data from database
+    let credits = 1000; // Default fallback
+    let monthlyUsage = 0;
     
-    // For now, we don't have the actual database connection
-    // so we'll return mock data
+    try {
+      credits = await getUserCredits(userId);
+      monthlyUsage = await getMonthlyApiUsage(userId);
+      
+      if (isDevelopment) {
+        console.log(`Retrieved credits: ${credits}, monthly usage: ${monthlyUsage}`);
+      }
+    } catch (error) {
+      // If database operations fail, use default values
+      console.error('Database error when fetching credits:', error);
+      
+      if (isDevelopment) {
+        console.log('Using default values due to database error');
+      }
+    }
+    
     return NextResponse.json({
-      credits: 1000,
-      monthlyUsage: 243
+      credits,
+      monthlyUsage
     });
   } catch (error) {
     console.error('Error fetching user data:', error);

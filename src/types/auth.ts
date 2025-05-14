@@ -12,6 +12,7 @@ export type User = {
   id: string;
   name?: string | null;
   email: string;
+  credits?: number;
   // Add any other user properties you need
 };
 
